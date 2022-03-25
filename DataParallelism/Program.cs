@@ -15,10 +15,18 @@ namespace DataParallelism
 	{
 		static void Main()
 		{
-			PlinqDemo();
+			var width = 128;
+			var height = 128;
+
+			var local = new ThreadLocal<int>(() => Guid.NewGuid().GetHashCode() | unchecked((int)0xff000000));
+			// var bitmap = new DirectBitmap(new Bitmap(width, height));
+			ParallelForImageDemo();
+
+
+			// PlinqDemo();
 			//CompareDifferentApproaches();
 
-			//PrimesAndPartitioner();
+			// PrimesAndPartitioner();
 
 			//ParallelInvokeDemo();
 			//ParallelInvokeOptionsDemo();
@@ -41,7 +49,7 @@ namespace DataParallelism
 			var array = Enumerable
 				.Range(0, 10_000_000)
 				.Select(_ => random.Next(0, 16))
-				.AsParallel()
+				// .AsParallel()
 				.Select(Fib)
 				.ToArray();
 
@@ -65,7 +73,7 @@ namespace DataParallelism
 			Console.WriteLine("                Parallel.For: " + sw.Elapsed);
 
 			sw.Restart();
-			Parallel.ForEach(Enumerable.Range(0, N), DoNothing);
+			Parallel.ForEach(Enumerable.Range(0, N).ToArray(), DoNothing);
 			sw.Stop();
 			Console.WriteLine("            Parallel.ForEach: " + sw.Elapsed);
 
@@ -203,18 +211,32 @@ namespace DataParallelism
 
 		#region Parallel.For
 
+		private static readonly object locker = new();
 		public static void ParallelForImageDemo()
 		{
-			using var image = (Bitmap)Image.FromFile("large.png");
+			// using var image = (Bitmap)Image.FromFile("large.png");
+			using var image = new Bitmap(1000, 1000);
 			using var bmp = new DirectBitmap(image);
 
 			var sw = Stopwatch.StartNew();
-
-			//for(int y = 0; y < bmp.Height; y++)
-			Parallel.For(0, bmp.Height, y =>
+			var tc = 10;
+			var pointer = 0;
+			
+			
+			
+			var partitioner = Partitioner.Create(0, bmp.Height,bmp.Height/tc);
+			Parallel.ForEach(partitioner, partition =>
 			{
-				for(int x = 0; x < bmp.Width; x++)
-					bmp.FastSetPixel(x, y, bmp.FastGetPixel(x, y).GrayScale());
+				var guid = new ThreadLocal<int>(() => Guid.NewGuid().GetHashCode() | unchecked((int)0xff000000));
+				
+				for(int x = 0; x < (bmp.Width * bmp.Height)/ (400 * tc); x++)
+				{
+					lock (locker)
+					{
+						bmp.FastSet20X20Pixel(pointer++, Color.FromArgb(guid.Value));
+					}
+				}
+					// bmp.FastSetPixel(x, y, bmp.FastGetPixel(x, y).GrayScale());
 			});
 
 			sw.Stop();
@@ -246,7 +268,10 @@ namespace DataParallelism
 		[ThreadStatic] private static long dummy;
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		private static void DoNothing(int i) { dummy += i; }
+		private static void DoNothing(int i)
+		{
+			
+		}
 
 		private static int Fib(int n)
 		{

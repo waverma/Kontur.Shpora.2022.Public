@@ -31,6 +31,26 @@ namespace DataParallelism
 				throw new ArgumentOutOfRangeException();
 			ptr[y * data.Width + x] = color.ToArgb();
 		}
+		
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public unsafe void FastSet20X20Pixel(int index, Color color)
+		{
+			if(index >= data.Width * data.Height)
+				throw new ArgumentOutOfRangeException();
+
+			var bigLine = index / (data.Width / 20);
+			var bigColumn = index % (data.Width / 20);
+			var realLine = bigLine * 20;
+			var realColumn = bigColumn * 20;
+			
+			for (int j = 0; j < 20; j++)
+			{
+				for (var i = 0; i < 20; i++)
+				{
+					ptr[realLine * data.Width + realColumn + j + i * data.Width] = color.ToArgb();
+				}
+			}
+		}
 
 		public void Dispose()
 		{

@@ -31,7 +31,7 @@ namespace ThreadPool
 			Enumerable.Range(0, iterations).ForEach(_ => TestOneAction());
 		}
 
-		[TestCase(10000)]
+		[TestCase(5)]
 		public void TestDispose(int iterations)
 		{
 			Enumerable.Range(0, iterations).AsParallel().WithDegreeOfParallelism(Environment.ProcessorCount).ForAll(_ => TestOneAction());
