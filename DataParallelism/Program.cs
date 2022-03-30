@@ -225,17 +225,34 @@ namespace DataParallelism
 			
 			
 			var partitioner = Partitioner.Create(0, bmp.Height,bmp.Height/tc);
+
+			Enumerable.Range(0, tc).AsParallel().AsOrdered().Select(z =>
+			// ParallelEnumerable.Range(0, tc).AsOrdered().Select(z =>
+			{
+				Action a = () =>
+				{
+					var guid = new ThreadLocal<int>(() => Guid.NewGuid().GetHashCode() | unchecked((int)0xff000000));
+
+					for (int x = 0; x < (bmp.Width * bmp.Height) / (400 * tc); x++)
+					{
+						lock (locker)
+						{
+							bmp.FastSet20X20Pixel(pointer++, Color.FromArgb(guid.Value));
+						}
+					}
+
+				};
+
+				return a;
+			}).Select(x =>
+			{
+				x();
+				return 1;
+			}).ToList();
+			
 			Parallel.ForEach(partitioner, partition =>
 			{
-				var guid = new ThreadLocal<int>(() => Guid.NewGuid().GetHashCode() | unchecked((int)0xff000000));
 				
-				for(int x = 0; x < (bmp.Width * bmp.Height)/ (400 * tc); x++)
-				{
-					lock (locker)
-					{
-						bmp.FastSet20X20Pixel(pointer++, Color.FromArgb(guid.Value));
-					}
-				}
 					// bmp.FastSetPixel(x, y, bmp.FastGetPixel(x, y).GrayScale());
 			});
 
