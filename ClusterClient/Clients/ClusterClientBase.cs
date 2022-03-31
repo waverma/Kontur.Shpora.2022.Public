@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
@@ -40,5 +42,7 @@ namespace ClusterClient.Clients
                 return result;
             }
         }
+        
+        protected static async Task<Task> WhenAny(IEnumerable<Task> taskList, params Task[] tasks) => await Task.WhenAny(taskList.Concat(tasks));
     }
 }
