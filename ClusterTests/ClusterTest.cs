@@ -33,7 +33,7 @@ namespace ClusterTests
 
 			ProcessRequests(Timeout);
 		}
-
+		
 		[Test]
 		public void Client_should_return_success_when_all_replicas_are_fast()
 		{
@@ -158,7 +158,7 @@ namespace ClusterTests
 			}
 		}
 
-		private List<ClusterServer> clusterServers;
+		protected List<ClusterServer> clusterServers;
 
 		private readonly ILog log = LogManager.GetLogger(typeof(Program));
 

@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using Cluster;
 using ClusterClient.Clients;
 using FluentAssertions;
 using NUnit.Framework;
@@ -64,6 +67,68 @@ namespace ClusterTests
 
 			foreach(var time in ProcessRequests(6000))
 				time.Should().BeCloseTo(TimeSpan.FromMilliseconds(4000), Epsilon);
+		}
+		
+		[Test]
+		public void Client_should_Recalculating()
+		{
+			CreateServer(1300);
+			CreateServer(1300);
+			CreateServer(1300);
+			CreateServer(1300);
+			CreateServer(1300);
+			CreateServer(300);
+		
+			var addresses = clusterServers
+				.Select(cs => $"http://127.0.0.1:{cs.ServerOptions.Port}/{cs.ServerOptions.MethodName}/")
+				.ToArray();
+
+			var client = CreateClient(addresses);
+
+			for (int i = 0; i < 20; i++)
+			{
+				ProcessRequests___(1299, client);
+			}
+		}
+		
+		[Test]
+		public void Client_should_Recalculating2()
+		{
+			CreateServer(2000);
+			CreateServer(Fastest);
+		
+			var addresses = clusterServers
+				.Select(cs => $"http://127.0.0.1:{cs.ServerOptions.Port}/{cs.ServerOptions.MethodName}/")
+				.ToArray();
+
+			var client = CreateClient(addresses);
+			
+			for (int i = 0; i < 1000; i++)
+			{
+				ProcessRequests___(2100, client);
+			}
+			
+		}
+		
+		protected void ProcessRequests___(double timeout, ClusterClientBase client)
+		{
+			var timer = Stopwatch.StartNew();
+			var query = 0.ToString("x8");
+			try
+			{
+				var clientResult = client.ProcessRequestAsync(query, TimeSpan.FromMilliseconds(timeout)).Result;
+				timer.Stop();
+
+				clientResult.Should().Be(Encoding.UTF8.GetString(ClusterHelpers.GetBase64HashBytes(query)));
+				timer.ElapsedMilliseconds.Should().BeLessThan((long)timeout + Epsilon);
+
+				Console.WriteLine("Query \"{0}\" successful ({1} ms)", query, timer.ElapsedMilliseconds);
+
+			}
+			catch(Exception)
+			{
+				Console.WriteLine("Query \"{0}\" timeout ({1} ms)", query, timer.ElapsedMilliseconds);
+			}
 		}
 	}
 }
